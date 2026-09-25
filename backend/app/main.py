@@ -8,8 +8,10 @@ Then open http://localhost:8000/health or the interactive docs at http://localho
 from fastapi import FastAPI
 
 from app.db import database_is_up
+from app.routers import jobs
 
 app = FastAPI(title="Job Match Assistant API", version="0.1.0")
+app.include_router(jobs.router)
 
 
 @app.get("/health")
