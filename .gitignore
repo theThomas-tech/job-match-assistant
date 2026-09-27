@@ -1,6 +1,11 @@
 # Secrets
 .env
 
+# Personal documents (resumes, cover letters) must never reach the public repo
+*.pdf
+*.docx
+resumes/
+
 # Python
 __pycache__/
 *.pyc
