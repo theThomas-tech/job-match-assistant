@@ -53,3 +53,24 @@ A short note after each milestone: what was built, what I learned, and what was 
 
 **Learned:**
 - *(fill in: e.g. why validate AI output with a schema, why log every model call, why fix some problems in code instead of the prompt)*
+
+## M3: Vector search
+**Built:**
+- Local embeddings (`bge-small-en-v1.5` via fastembed: ONNX, no PyTorch) stored in pgvector columns
+- `python -m app.embed`: embeds new/changed jobs and the profile, then links near-duplicate postings
+- `GET /search/jobs`: nearest jobs to the profile, or semantic search with a text query
+- 61 tests, with a fake bag-of-words embedder so they never load the real model
+
+**Decisions backed by data:**
+- *What to embed.* The model reads ~512 tokens; postings average 6–8k characters and start with company boilerplate. Counted the most common headings across all 2,221 postings, then kept only requirement and role sections (found in 99.7% of postings). 84% were still too long and requirements usually come last, so requirements now go first.
+- *Leave location out of the embedding.* My first version included it, and tests showed it stopped cross-city copies of a job from matching. Location is a filter (M4), not a similarity signal.
+- *Near-duplicate threshold 0.97.* Looked at every same-company, same-title pair: 101 pairs ≥ 0.97 were all copy-pasted per city; pairs at 0.93–0.97 were rewritten per region with different requirements (e.g. OpenAI's two "Applied AI Engineer, Codex" versions differ in 49 lines), so they stay separate. Result: 74 postings linked.
+- *No vector index yet.* An exact scan over ~2k rows takes ~80 ms.
+
+**What I found out about vector search:**
+- My top 20 matches all scored 0.749–0.764. Scores are too bunched for fine ranking.
+- It found a highly relevant role at #4 (Cohere Software Engineer Intern, Winter 2027) but put Cursor "New Grad 2027" at #456, LangChain "Early Career" roles at #173 and #251, and the Zof role I pasted at #423. It doesn't understand seniority.
+- → M4 needs title rules and "always keep pasted jobs" before cutting to the top K, not just a bigger K.
+
+**Learned:**
+- *(fill in: e.g. what an embedding is, why cosine similarity, why a cheap stage before an expensive one)*

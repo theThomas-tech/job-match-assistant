@@ -31,6 +31,8 @@ def engine():
     admin.dispose()
 
     test_engine = create_engine(url.set(database=TEST_DB_NAME))
+    with test_engine.begin() as conn:
+        conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
     # Rebuild the tables from app/models.py so tests always match the current code.
     SQLModel.metadata.drop_all(test_engine)
     SQLModel.metadata.create_all(test_engine)

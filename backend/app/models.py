@@ -6,9 +6,12 @@
 
 from datetime import UTC, datetime
 
+from pgvector.sqlalchemy import Vector
 from sqlalchemy import Column, DateTime, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
+
+from app.embeddings import EMBEDDING_DIM
 
 
 def utcnow() -> datetime:
@@ -43,6 +46,13 @@ class Job(SQLModel, table=True):
     last_seen_at: datetime = Field(default_factory=utcnow, sa_type=DateTime(timezone=True))
     is_active: bool = Field(default=True, index=True)  # False once removed from its board
 
+    # Vector search (app/embed.py). embedded_hash = content_hash at the time of embedding,
+    # so a changed posting gets re-embedded.
+    embedding: list[float] | None = Field(default=None, sa_column=Column(Vector(EMBEDDING_DIM)))
+    embedded_hash: str | None = Field(default=None, max_length=64)
+    # Set when this posting is a near-copy of another (e.g. the same role posted per city).
+    duplicate_of_id: int | None = Field(default=None, foreign_key="jobs.id", index=True)
+
 
 class Profile(SQLModel, table=True):
     """A resume turned into structured data. The newest row is the current profile."""
@@ -58,6 +68,8 @@ class Profile(SQLModel, table=True):
     edited_by_user: bool = False
     created_at: datetime = Field(default_factory=utcnow, sa_type=DateTime(timezone=True))
     updated_at: datetime = Field(default_factory=utcnow, sa_type=DateTime(timezone=True))
+    # Computed from `data` when needed; reset to None whenever `data` changes.
+    embedding: list[float] | None = Field(default=None, sa_column=Column(Vector(EMBEDDING_DIM)))
 
 
 class LLMCall(SQLModel, table=True):

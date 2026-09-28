@@ -1,6 +1,35 @@
-"""Test helpers: a fake AI model and a tiny PDF builder."""
+"""Test helpers: a fake AI model, a fake embedder and a tiny PDF builder."""
 
+import hashlib
+import math
+import re
+
+from app.embeddings import EMBEDDING_DIM
 from app.llm import LLMResult
+
+
+class FakeEmbedder:
+    """Bag-of-words vectors: texts sharing more words are more similar. Fast and deterministic."""
+
+    model_name = "fake-embedder"
+
+    def __init__(self):
+        self.texts: list[str] = []
+
+    def embed(self, texts):
+        self.texts.extend(texts)
+        return [self._vector(text) for text in texts]
+
+    def embed_query(self, text):
+        return self._vector(text)
+
+    @staticmethod
+    def _vector(text):
+        vector = [0.0] * EMBEDDING_DIM
+        for word in re.findall(r"[a-z0-9]+", text.lower()):
+            vector[int(hashlib.md5(word.encode()).hexdigest(), 16) % EMBEDDING_DIM] += 1.0
+        norm = math.sqrt(sum(x * x for x in vector)) or 1.0
+        return [x / norm for x in vector]
 
 
 class FakeProvider:

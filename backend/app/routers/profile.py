@@ -18,7 +18,7 @@ MAX_UPLOAD_BYTES = 5 * 1024 * 1024
 def _to_read(profile: Profile) -> ProfileRead:
     data = ResumeProfile.model_validate(profile.data)
     return ProfileRead(
-        **profile.model_dump(exclude={"data", "resume_text"}),
+        **profile.model_dump(exclude={"data", "resume_text", "embedding"}),
         data=data,
         warnings=check_grounding(data, profile.resume_text),
     )
@@ -70,6 +70,7 @@ def update_profile(body: ResumeProfile, session: Session = Depends(get_session))
     """Replace the current profile with corrected data (e.g. after fixing an AI mistake)."""
     profile = _latest(session)
     profile.data = body.model_dump()
+    profile.embedding = None  # recomputed from the new data at the next search
     profile.edited_by_user = True
     profile.updated_at = utcnow()
     session.add(profile)

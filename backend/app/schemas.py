@@ -22,6 +22,15 @@ class JobSummary(SQLModel):
     is_active: bool
 
 
+class JobMatch(JobSummary):
+    """A job returned by vector search, with how similar it is to the profile or query."""
+
+    similarity: float = Field(description="Cosine similarity, higher = closer (roughly 0 to 1)")
+    also_posted_in: list[str] = Field(
+        default_factory=list, description="Locations of near-duplicate postings of the same job"
+    )
+
+
 class JobRead(JobSummary):
     """A single job with all its details."""
 
