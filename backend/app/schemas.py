@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from pydantic import Field
+from pydantic import BaseModel, Field
 from sqlmodel import SQLModel
 
 
@@ -40,3 +40,52 @@ class ManualJobIn(SQLModel):
     description: str = Field(min_length=50, description="The full job description text")
     location: str | None = Field(default=None, max_length=200)
     url: str | None = Field(default=None, max_length=2000)
+
+
+# --- Resume profile: what the AI model extracts from a resume (and what the user can edit) ---
+
+
+class WorkExperience(BaseModel):
+    title: str
+    organization: str
+    start: str | None = Field(description="e.g. 2023-06 or 2023; null if not stated")
+    end: str | None = Field(description='"present" if current; null if not stated')
+    highlights: list[str] = Field(description="At most 3 short achievements from the resume")
+
+
+class Project(BaseModel):
+    name: str
+    summary: str = Field(description="One short sentence")
+    technologies: list[str]
+
+
+class Education(BaseModel):
+    qualification: str
+    institution: str
+    end_year: str | None
+
+
+class ResumeProfile(BaseModel):
+    headline: str
+    location: str | None
+    total_years_experience: float | None = Field(description="null if unclear")
+    skills: list[str]
+    experience: list[WorkExperience]
+    projects: list[Project]
+    education: list[Education]
+    certifications: list[str]
+
+
+class ProfileRead(SQLModel):
+    id: int
+    source_filename: str
+    model: str
+    prompt_version: str
+    edited_by_user: bool
+    created_at: datetime
+    updated_at: datetime
+    data: ResumeProfile
+    warnings: list[str] = Field(
+        default_factory=list,
+        description="Items in the profile that couldn't be found in the resume text (possible AI mistakes)",
+    )

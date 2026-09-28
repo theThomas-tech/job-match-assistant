@@ -42,3 +42,40 @@ class Job(SQLModel, table=True):
     first_seen_at: datetime = Field(default_factory=utcnow, sa_type=DateTime(timezone=True))
     last_seen_at: datetime = Field(default_factory=utcnow, sa_type=DateTime(timezone=True))
     is_active: bool = Field(default=True, index=True)  # False once removed from its board
+
+
+class Profile(SQLModel, table=True):
+    """A resume turned into structured data. The newest row is the current profile."""
+
+    __tablename__ = "profiles"
+
+    id: int | None = Field(default=None, primary_key=True)
+    source_filename: str
+    resume_text: str = Field(sa_column=Column(Text, nullable=False))
+    data: dict = Field(sa_column=Column(JSONB, nullable=False))  # a ResumeProfile (app/schemas.py)
+    model: str  # which AI model extracted it
+    prompt_version: str
+    edited_by_user: bool = False
+    created_at: datetime = Field(default_factory=utcnow, sa_type=DateTime(timezone=True))
+    updated_at: datetime = Field(default_factory=utcnow, sa_type=DateTime(timezone=True))
+
+
+class LLMCall(SQLModel, table=True):
+    """One call to an AI model: what it was for, how long it took, tokens used and cost."""
+
+    __tablename__ = "llm_calls"
+
+    id: int | None = Field(default=None, primary_key=True)
+    created_at: datetime = Field(
+        default_factory=utcnow, sa_type=DateTime(timezone=True), index=True
+    )
+    provider: str  # "ollama", later "anthropic"
+    model: str
+    purpose: str = Field(index=True)  # e.g. "resume_profile", later "job_screen", "job_score"
+    prompt_version: str
+    input_tokens: int = 0
+    output_tokens: int = 0
+    latency_ms: int = 0
+    cost_usd: float = 0.0
+    success: bool = False
+    error: str | None = Field(default=None, sa_column=Column(Text))

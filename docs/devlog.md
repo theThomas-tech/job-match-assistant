@@ -32,3 +32,24 @@ A short note after each milestone: what was built, what I learned, and what was 
 
 **Learned:**
 - *(fill in: e.g. what a database migration is, why the parsers are tested without the network, what "idempotent" means for the ingest run)*
+
+## M2: Resume profile
+**Built:**
+- Provider-agnostic model layer (`app/llm/`): an `LLMProvider` interface with an Ollama implementation; Claude plugs in later with one `.env` change
+- `generate_structured()`: gets schema-valid JSON into a Pydantic model, retries once with the validation error, refuses empty input, and logs every call to `llm_calls`
+- Resume PDF → text → structured profile (`profiles` table), as a command and as API endpoints (upload, view, edit)
+- Grounding check: flags skills/organizations/institutions/location that don't appear in the resume
+- Versioned prompt file: `app/prompts/profile_v1.md`
+- 46 tests, using a fake model so they run in about a second without Ollama
+
+**Decision: start with a free local model.** Chose Ollama + Qwen 2.5 7B over paying for Claude up front. Measured on my laptop (CPU only, MX550 GPU too small): reading ~86 tokens/s, writing ~4 tokens/s. Writing is the bottleneck, so outputs must stay short.
+
+**What went wrong, and the fixes:**
+- Given an *empty* job description in a test, the model invented a full answer. → The model layer now refuses empty input.
+- It said `min_years_experience: 0` for a posting that didn't state it. → Schemas use `null` for "not stated".
+- Ollama's JSON `format` only constrains the output; the model never sees it. → The schema is also included in the instructions.
+- On my resume it invented "Accra, Ghana" (not in the resume, guessed from "University of Ghana") and missed PHP, Java, GitHub and Gradle. → Location added to the grounding check; project technologies merged into skills in code.
+- Same input, `temperature=0`, two runs → different headlines. Local models aren't perfectly repeatable, which matters for evals.
+
+**Learned:**
+- *(fill in: e.g. why validate AI output with a schema, why log every model call, why fix some problems in code instead of the prompt)*
